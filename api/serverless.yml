@@ -1,0 +1,38 @@
+service: cph-api
+
+plugins:
+  - serverless-offline
+
+provider:
+  name: aws
+  runtime: nodejs22.x
+  environment:
+    NODE_ENV: ${self:custom.node_env}
+    DATABASE_URL: ${self:custom.database_url}
+  vpc:
+    securityGroupIds:
+      - ${env:LAMBDA_SECURITY_GROUP_ID}
+    subnetIds:
+      - ${env:SUBNET_A_ID}
+      - ${env:SUBNET_B_ID}
+  region: 'eu-west-3'
+  logs:
+    restApi: false
+    httpApi: false
+
+functions:
+  main:
+    handler: dist/main.handler
+    events:
+      - httpApi:
+          method: ANY
+          path: /
+      - httpApi:
+          method: ANY
+          path: /{proxy+}
+    timeout: 20
+    logRetentionInDays: 1
+
+custom:
+  node_env: ${env:NODE_ENV, 'development'}
+  database_url: ${env:DATABASE_URL}

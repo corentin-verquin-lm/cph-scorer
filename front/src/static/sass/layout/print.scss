@@ -1,0 +1,51 @@
+@media print {
+  @page {
+    size: landscape;
+  }
+
+  .navbar,
+  .nav {
+    display: none;
+  }
+
+  .container {
+    max-width: none !important;
+    padding-top: 0 !important;
+  }
+
+  .match {
+    height: auto !important;
+    margin-top: 1rem;
+
+    &__body {
+      height: auto !important;
+    }
+
+    &__score {
+      display: none;
+    }
+
+    &__team {
+      font-size: 1.1rem;
+      max-width: none !important;
+      width: 50%;
+
+      &:first-child {
+        border-right: 1px solid bootstrap.$gray-500;
+      }
+    }
+
+    &__header {
+      background: none;
+    }
+  }
+
+  .print-col {
+    flex: 0 0 auto;
+    width: 50% !important;
+  }
+
+  table * {
+    color: bootstrap.$black !important;
+  }
+}

@@ -1,0 +1,6 @@
+include ../card/card.pug
+
++card({header:'Joueur inscrit', body: false},'js-skeleton-show d-none')
+  ul.list-group.list-group-flush.register(x-data="register")
+    template(x-for="register in $store.RegisterStore.player", :key="register")
+      li.list-group-item(x-text="register")

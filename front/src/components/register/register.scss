@@ -1,0 +1,20 @@
+.register {
+  max-height: 250px;
+  overflow-y: scroll;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: bootstrap.$white;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: bootstrap.$gray-500;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: bootstrap.$gray-600;
+  }
+}

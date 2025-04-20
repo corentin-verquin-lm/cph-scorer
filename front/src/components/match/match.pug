@@ -1,0 +1,11 @@
+.match(:data-id="match.id", @click="setScore($event)")
+  .match__header(x-text="`Terrain ${area[index] || A.T}`")
+  .match__body
+    .match__team
+      template(x-for="player in match.teamOne.players")
+        p.match__player(x-text="`${player.firstName} - ${player.lastName}`")
+    .match__score
+      p(x-text="`${match.teamOne.score}-${match.teamTwo.score}`")
+    .match__team
+      template(x-for="player in match.teamTwo.players")
+        p.match__player(x-text="`${player.firstName} - ${player.lastName}`")

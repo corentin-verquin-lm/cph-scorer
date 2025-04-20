@@ -1,0 +1,65 @@
+include ../card/card.pug
+include ../modal/modal.pug
+
+div(x-data="registerInput")
+  +card
+    .d-flex.flex-column.js-skeleton(style="row-gap: 10px")
+      .skeleton-box(style="width: 140px; height: 24px")
+      .skeleton-box(style="width: 100%; height: 38px")
+      .d-flex.justify-content-between.align-items-end
+        .skeleton-box(style="width: 204px; height: 24px")
+        .skeleton-box(style="width: 81px; height: 38px")
+
+    form.js-register-form.js-skeleton-show.d-none(@submit="submit($event)")
+      label.form-label(for="playerList") Ajouter un joueur
+      input#playerList.form-control(
+        list="datalistOptions",
+        placeholder="Taper pour rechercher",
+        name="player",
+        required
+      )
+      .invalid-feedback Le champ est obligatoire
+      datalist#datalistOptions
+        template(x-for="p in player")
+          option(:value="`${p.firstName} - ${p.lastName}`", :data-id="p.id")
+      .d-flex.justify-content-between.align-items-end.mt-3
+        div
+          template(x-for="rank in rankingType")
+            .form-check.form-check-inline
+              input.form-check-input(
+                type="radio",
+                name="rankingType",
+                :id="rank",
+                :value="rank",
+                required
+              )
+              label.form-check-label.register-input__radio-label(
+                :for="rank",
+                x-text="rank"
+              )
+        button.btn.btn-primary(
+          type="submit",
+          @click="valid($event)",
+          data-e2e-valid-register
+        ) Valider
+
+  +modal("Ajouter un nouveau joueur","js-modal-add")
+    form.px-5(@submit="addPlayer($event)")
+      .mb-3
+        label.form-label(for="firstName") Prénom
+        input#firstName.form-control(name="firstName", required)
+        .invalid-feedback Le champ est obligatoire
+      .mb-5
+        label.form-label(for="lastName") Nom
+        input#lastName.form-control(name="lastName", required)
+        .invalid-feedback Le champ est obligatoire
+      .mb-3.d-flex.justify-content-end
+        button.btn.btn-outline-secondary.me-3(
+          type="button",
+          data-bs-dismiss="modal"
+        ) Fermer
+        button.btn.btn-primary(
+          type="submit",
+          @click="valid($event)",
+          data-e2e-valid-modal
+        ) Valider

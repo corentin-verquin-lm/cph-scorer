@@ -1,0 +1,37 @@
+extends ../layout/default.pug
+
+block variables
+  - var page = 0;
+
+block srcipt
+  script(src="../static/js/index.js", defer)
+
+block content
+  .row.justify-content-center
+    .col.col-lg-4
+      include ../components/register-input/register-input.pug
+
+  .row.justify-content-center.mt-3
+    .col.col-lg-4
+      include ../components/register/register.pug
+
+  .fixed-bottom.me-3.mb-3.start-button.d-flex
+    button.btn.btn-danger.d-flex.align-items-center.me-3(
+      type="button",
+      x-data="index",
+      @click="reset",
+      :disabled="buttonResetDisabled"
+    )
+      template(x-if="buttonResetDisabled")
+        .spinner-grow.spinner-grow-sm.me-2
+      | Nouveau concours
+
+    button.btn.btn-success.d-flex.align-items-center(
+      type="button",
+      x-data="index",
+      @click="start",
+      :disabled="buttonStartDisabled"
+    )
+      template(x-if="buttonStartDisabled")
+        .spinner-grow.spinner-grow-sm.me-2
+      | Lancer le concours

@@ -1,0 +1,14 @@
+mixin modal(title, classes="")
+  .modal.fade(tabindex="-1", class=classes)
+    .modal-dialog.modal-fullscreen-md-down
+      .modal-content
+        .modal-header
+          p.modal-title #{ title }
+          button.btn-close(
+            type="button",
+            data-bs-dismiss="modal",
+            aria-label="Close"
+          )
+        .modal-body
+          p
+            block

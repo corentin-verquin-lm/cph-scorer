@@ -1,0 +1,45 @@
+extends ../layout/default.pug
+include ../components/modal/modal.pug
+
+block variables
+  - var page = 2;
+
+block srcipt
+  script(src="../static/js/ranking.js", defer) 
+
+block content
+  div(x-data="ranking")
+    ul.nav.nav-tabs.print-btn__container
+      template(x-for="i in rankinType")
+        li.nav-item(:key="i")
+          button.nav-link(
+            x-text="i",
+            :class="i === selectedRanking && 'active'",
+            :data-index="i",
+            @click="changeSelected($event)"
+          )
+      li
+        button.print-btn.btn.btn-outline-primary.btn-sm(
+          @click="window.print()"
+        ) Imprimer
+
+    h1.my-5.fw-bold.fs-2(
+      x-text="`Classement concours ${selectedRanking} au ${new Date().toLocaleDateString()}`"
+    ) 
+
+    table.table.table-bordered
+      thead.table-dark
+        tr 
+        th(scope="col") #
+        th(scope="col") Prénom - Nom
+        th(scope="col") Point
+        th(scope="col") GoalAverage
+        th(scope="col") Participation
+      tbody 
+        template(x-for="(r, index) in rankings")
+          tr
+            th(x-text="index+1", scope="row")
+            td(x-text="`${r.players[0].firstName} - ${r.players[0].lastName}`")
+            td(x-text="r.point")
+            td(x-text="r.goalAverage")
+            td(x-text="r.participation")

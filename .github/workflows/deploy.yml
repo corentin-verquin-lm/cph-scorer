@@ -1,0 +1,173 @@
+name: Deploy to Production
+run-name: Deploy to Production - ${{ github.ref_name }}
+description: Deploys the application to production.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+  
+jobs:
+  infra:
+    name: 🏗️ Initialize Infrastructure
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infra    
+    outputs:
+      lambda_security_group_id: ${{ steps.infra_info.outputs.lambda_security_group_id }}
+      subnet_a_id: ${{ steps.infra_info.outputs.subnet_a_id }}
+      subnet_b_id: ${{ steps.infra_info.outputs.subnet_b_id }}
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: ⚙️ Install Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.11.4
+
+      - name: 🧱 Terraform Init
+        run: terraform init
+
+      - name: 🔍 Terraform Plan
+        run: terraform plan
+
+      - name: ✅ Terraform Apply
+        run: terraform apply -auto-approve
+
+      - name: 🧾 Terraform Output
+        id: infra_info
+        run: |-          
+          {
+            echo "lambda_security_group_id=$(terraform output -raw lambda_security_group_id)"
+            echo "subnet_a_id=$(terraform output -raw subnet_a_id)"
+            echo "subnet_b_id=$(terraform output -raw subnet_b_id)"
+          } >> $GITHUB_OUTPUT
+
+  deploy-api:
+    needs: infra
+    name: 🚀 Deploy API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: api
+    outputs:
+      api_url: ${{ steps.deploy.outputs.api_url }}
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: api/package-lock.json
+
+      - name: 🧩 Install deps
+        run: npm ci
+
+      - name: 🛠️ Build
+        run: npm run build
+
+      - name: 🔑 Get secrets from SSM
+        id: get_secrets
+        run: |
+          get_param() {
+            local name=$1
+            local key=$2
+            value=$(aws ssm get-parameter \
+              --name "$name" \
+              --query "Parameter.Value" \
+              --with-decryption \
+              --output text)
+            echo "::add-mask::$value"
+            echo "$key=$value" >> $GITHUB_OUTPUT
+          }
+      
+          get_param "/cph/prod/postgres_connection_string" "DATABASE_URL"
+          get_param "/cph/prod/serverless_key" "SERVERLESS_ACCESS_KEY"
+      
+
+      - name: 🚀 Deploy
+        id: deploy
+        run: |-
+          npx serverless deploy --stage prod
+          api_url=$(aws apigatewayv2 get-apis --region ${{ vars.AWS_REGION }} |\
+            jq -r '.Items[] | select(.Tags["aws:cloudformation:stack-name"] == "cph-api-prod") | .ApiEndpoint')
+          echo "api_url=${api_url}" >> $GITHUB_OUTPUT
+        env:
+          NODE_ENV: production
+          SERVERLESS_ACCESS_KEY: ${{ steps.get_secrets.outputs.SERVERLESS_ACCESS_KEY }}
+          LAMBDA_SECURITY_GROUP_ID: ${{ needs.infra.outputs.lambda_security_group_id }}
+          SUBNET_A_ID: ${{ needs.infra.outputs.subnet_a_id }}
+          SUBNET_B_ID: ${{ needs.infra.outputs.subnet_b_id }}
+          DATABASE_URL: ${{ steps.get_secrets.outputs.DATABASE_URL }}
+
+  deploy-frontend:
+    needs: [deploy-api]
+    name: 🚀 Deploy Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: front
+
+    steps:
+      - name: 📥 Checkout repo
+        uses: actions/checkout@v4
+
+      - name: 🔐 Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v3
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE }}
+          aws-region: ${{ vars.AWS_REGION }}
+          audience: sts.amazonaws.com
+
+      - name: ⚙️ Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: front/package-lock.json
+
+      - name: 🧩 Install deps
+        run: npm ci
+
+      - name: 🛠️ Build
+        run: |-
+          touch .env
+          echo 'ENDPOINT="${{ env.ENDPOINT }}"' >> .env          
+          npm run build 
+        env:
+          ENDPOINT: ${{ needs.deploy-api.outputs.api_url }}
+
+      - name: 🚀 Deploy
+        run: aws s3 sync dist/ s3://cph-website/ --delete

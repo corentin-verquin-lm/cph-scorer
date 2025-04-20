@@ -1,0 +1,11 @@
+mixin card(config={}, classes='')
+  - var conf = { ...{ body: true, header: null }, ...config };
+
+  .card(class=classes)
+    if conf.header !== null
+      .card-header #{ conf.header }
+    if conf.body
+      .card-body
+        block
+    else
+      block
